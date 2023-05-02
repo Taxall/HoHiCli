@@ -1,10 +1,4 @@
 {
-  "minTemperature": 16.0,
-  "maxTemperature": 30.0,
-  "modes": [
-    "heat",
-    "cool"
-  ],
   "fanSpeeds": [
     "turbo",
     "auto",

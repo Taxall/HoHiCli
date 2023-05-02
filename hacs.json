@@ -1,4 +1,7 @@
 {
   "name": "HoHiCli",
-  "persistent_directory": "ircommands"
+  "persistent_directory": "ircommands",
+  "country": [
+    "RU"
+  ]
 }
