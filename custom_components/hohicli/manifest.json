@@ -1,8 +1,8 @@
 {
     "domain": "hohicli",
-    "name": "HO Hisense Climate",
+    "name": "HO HI Climate",
     "codeowners": ["@Taxall"],
-    "config_flow": true,
+    "config_flow": false,
     "dependencies": [],
     "homekit": {},
     "homeassistant": "2022.4.0",

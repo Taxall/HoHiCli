@@ -31,7 +31,7 @@ async def async_setup_entry(hass, config, async_add_entities):
             _LOGGER.exception(ex)
             return
 
-    command_sender = get_command_sender(hass)
+    command_sender = get_command_sender(hass, config.get(CONF_UNIQUE_ID))
 
     async_add_entities(Climate(hass, config, device_data, command_sender))
 
@@ -203,3 +203,67 @@ class Climate(ClimateEntity, RestoreEntity):
                         self._commands[operation_mode][fan_mode][target_temperature])
             except Exception as ex: # pylint: disable=broad-except
                 _LOGGER.exception(ex)
+
+    @property
+    def unique_id(self):
+        """Return a unique ID."""
+        return self._attr_unique_id
+
+
+    @property
+    def state(self):
+        """Return the current state."""
+        if self._attr_hvac_mode != HVACMode.OFF:
+            return self._attr_hvac_mode
+        return HVACMode.OFF
+
+    @property
+    def min_temp(self):
+        """Return the polling state."""
+        return self._attr_min_temp
+        
+    @property
+    def max_temp(self):
+        """Return the polling state."""
+        return self._attr_max_temp
+
+    @property
+    def target_temperature(self):
+        """Return the temperature we try to reach."""
+        return self._attr_target_temperature
+
+
+    @property
+    def hvac_modes(self):
+        """Return the list of available operation modes."""
+        return self._attr_hvac_modes
+
+    @property
+    def hvac_mode(self):
+        """Return hvac mode ie. heat, cool."""
+        return self._attr_hvac_mode
+
+    @property
+    def last_on_operation(self):
+        """Return the last non-idle operation ie. heat, cool."""
+        return self._last_on_operation
+
+    @property
+    def fan_modes(self):
+        """Return the list of available fan modes."""
+        return self._attr_fan_modes
+
+    @property
+    def fan_mode(self):
+        """Return the fan setting."""
+        return self._attr_fan_mode
+
+    @property
+    def current_temperature(self):
+        """Return the current temperature."""
+        return self._attr_current_temperature
+
+    @property
+    def current_humidity(self):
+        """Return the current humidity."""
+        return self._attr_current_humidity
