@@ -3,11 +3,14 @@ import json
 import os.path
 import asyncio
 
-from homeassistant.core import callback
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import callback, HomeAssistant
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.components.climate.const import (
     HVACMode, ATTR_HVAC_MODE)
 from homeassistant.const import (
@@ -20,8 +23,16 @@ COMPONENT_ABS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config, async_add_entities):
+async def async_setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+) -> None:
     """Set up the hisense climate."""
+
+    _LOGGER.debug()
+
     device_json_path = os.path.join(
         COMPONENT_ABS_DIR, 'ircommands', 'hisense_smart-dc_inverter.json')
     with open(device_json_path, mode="r", encoding="utf-8") as json_obj:
@@ -33,7 +44,19 @@ async def async_setup_entry(hass, config, async_add_entities):
 
     command_sender = get_command_sender(hass, config.get(CONF_UNIQUE_ID))
 
-    async_add_entities([Climate(hass, config, device_data, command_sender)])
+    async_add_entities(
+        [
+            Climate(hass, config, device_data, command_sender)
+        ]
+    )
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the hisense climate devices config entry."""
+    await async_setup_platform(hass, config_entry, async_add_entities)
 
 
 class Climate(ClimateEntity, RestoreEntity):
