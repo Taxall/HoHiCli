@@ -33,7 +33,7 @@ async def async_setup_entry(hass, config, async_add_entities):
 
     command_sender = get_command_sender(hass, config.get(CONF_UNIQUE_ID))
 
-    async_add_entities(Climate(hass, config, device_data, command_sender))
+    async_add_entities([Climate(hass, config, device_data, command_sender)])
 
 
 class Climate(ClimateEntity, RestoreEntity):
