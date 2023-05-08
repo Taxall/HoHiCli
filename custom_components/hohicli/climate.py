@@ -31,8 +31,6 @@ async def async_setup_platform(
 ) -> None:
     """Set up the hisense climate."""
 
-    _LOGGER.debug()
-
     device_json_path = os.path.join(
         COMPONENT_ABS_DIR, 'ircommands', 'hisense_smart-dc_inverter.json')
     with open(device_json_path, mode="r", encoding="utf-8") as json_obj:
