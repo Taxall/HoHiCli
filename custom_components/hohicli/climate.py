@@ -20,7 +20,7 @@ from homeassistant.const import (
     CONF_NAME, STATE_UNKNOWN, STATE_UNAVAILABLE, ATTR_TEMPERATURE)
 from .sender import get_command_sender
 from .const import (
-    CONF_TEMPERATURE_SENSOR, CONF_HUMIDITY_SENSOR, CONF_MIN_TEMPERATURE, CONF_MAX_TEMPERATURE, CONF_UNIQUE_ID)
+    CONF_TEMPERATURE_SENSOR, CONF_HUMIDITY_SENSOR, CONF_MIN_TEMPERATURE, CONF_MAX_TEMPERATURE, CONF_UNIQUE_ID, CONF_TOPIC)
 
 COMPONENT_ABS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -71,7 +71,7 @@ async def async_setup_platform(
             _LOGGER.exception(ex)
             return
 
-    command_sender = get_command_sender(hass, config.get(CONF_UNIQUE_ID))
+    command_sender = get_command_sender(hass, config.get(CONF_TOPIC))
 
     async_add_entities(
         [
@@ -91,13 +91,18 @@ async def async_setup_entry(
 class Climate(ClimateEntity, RestoreEntity):
     """Class for managing conditioner"""
     def __init__(self, hass, config, device_data, command_sender):
+        _LOGGER.debug("init Climate")
+
+        self.hass = hass
 
         self._temp_lock = asyncio.Lock()
+
+        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+
         self._attr_temperature_unit = TEMP_CELSIUS
         self._attr_min_temp = CONF_MIN_TEMPERATURE
         self._attr_max_temp = CONF_MAX_TEMPERATURE
         self._controller = command_sender
-        self._hass = hass
         self._device_data = device_data
         self._attr_unique_id = config.get(CONF_UNIQUE_ID)
         self._attr_name = config.get(CONF_NAME)
@@ -120,14 +125,23 @@ class Climate(ClimateEntity, RestoreEntity):
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
+
+        _LOGGER.debug("async_added_to_hass")
+
         await super().async_added_to_hass()
 
         last_state = await self.async_get_last_state()
 
+        _LOGGER.debug(last_state.attributes)
+
         if last_state is not None:
             self._attr_hvac_mode = last_state.state
-            self._attr_fan_mode = last_state.attributes['fan_mode']
-            self._attr_target_temperature = last_state.attributes['temperature']
+
+            if 'fan_mode' in last_state.attributes:
+                self._attr_fan_mode = last_state.attributes['fan_mode']
+
+            if 'target_temperature' in last_state.attributes:
+                self._attr_target_temperature = last_state.attributes['target_temperature']
 
             if 'last_on_operation' in last_state.attributes:
                 self._last_on_operation = last_state.attributes['last_on_operation']
@@ -157,7 +171,7 @@ class Climate(ClimateEntity, RestoreEntity):
             return
 
         if temperature < self._attr_min_temp or temperature > self._attr_max_temp:
-            _LOGGER.warning('The temperature value is out of min/max range') 
+            _LOGGER.warning('The temperature value is out of min/max range')
             return
 
         self._attr_target_temperature = round(temperature)
@@ -262,64 +276,6 @@ class Climate(ClimateEntity, RestoreEntity):
         return self._attr_unique_id
 
     @property
-    def supported_features(self) -> int:
-        """Return the list of supported features."""
-        return ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE | ClimateEntityFeature.FAN_MODE
-
-    @property
-    def state(self):
-        """Return the current state."""
-        if self._attr_hvac_mode != HVACMode.OFF:
-            return self._attr_hvac_mode
-        return HVACMode.OFF
-
-    @property
-    def min_temp(self):
-        """Return the polling state."""
-        return self._attr_min_temp
-        
-    @property
-    def max_temp(self):
-        """Return the polling state."""
-        return self._attr_max_temp
-
-    @property
-    def target_temperature(self):
-        """Return the temperature we try to reach."""
-        return self._attr_target_temperature
-
-
-    @property
-    def hvac_modes(self):
-        """Return the list of available operation modes."""
-        return self._attr_hvac_modes
-
-    @property
-    def hvac_mode(self):
-        """Return hvac mode ie. heat, cool."""
-        return self._attr_hvac_mode
-
-    @property
     def last_on_operation(self):
         """Return the last non-idle operation ie. heat, cool."""
         return self._last_on_operation
-
-    @property
-    def fan_modes(self):
-        """Return the list of available fan modes."""
-        return self._attr_fan_modes
-
-    @property
-    def fan_mode(self):
-        """Return the fan setting."""
-        return self._attr_fan_mode
-
-    @property
-    def current_temperature(self):
-        """Return the current temperature."""
-        return self._attr_current_temperature
-
-    @property
-    def current_humidity(self):
-        """Return the current humidity."""
-        return self._attr_current_humidity
