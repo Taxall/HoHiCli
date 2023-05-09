@@ -15,7 +15,7 @@ from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.components.climate.const import (
-    HVACMode, ATTR_HVAC_MODE)
+    HVACMode, ATTR_HVAC_MODE, ClimateEntityFeature)
 from homeassistant.const import (
     CONF_NAME, STATE_UNKNOWN, STATE_UNAVAILABLE, ATTR_TEMPERATURE)
 from .sender import get_command_sender
@@ -261,6 +261,10 @@ class Climate(ClimateEntity, RestoreEntity):
         """Return a unique ID."""
         return self._attr_unique_id
 
+    @property
+    def supported_features(self) -> int:
+        """Return the list of supported features."""
+        return ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE | ClimateEntityFeature.FAN_MODE
 
     @property
     def state(self):
