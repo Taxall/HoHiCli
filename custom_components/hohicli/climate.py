@@ -3,6 +3,7 @@ import json
 import os.path
 import asyncio
 import aiohttp
+import aiofiles
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback, HomeAssistant
