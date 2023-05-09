@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import os.path
 import asyncio
 import aiohttp
@@ -43,8 +44,13 @@ async def async_setup_platform(
 ) -> None:
     """Set up the hisense climate."""
 
-    device_json_path = os.path.join(
-        COMPONENT_ABS_DIR, 'ircommands', 'hisense_smart-dc_inverter.json')
+    ircommands_path = os.path.join(
+        COMPONENT_ABS_DIR, 'ircommands');
+
+    device_json_path = os.path.join(ircommands_path , 'hisense_smart-dc_inverter.json')
+
+    if not os.path.exists(ircommands_path):
+        os.makedirs(ircommands_path)
 
     if not os.path.exists(device_json_path):
         _LOGGER.warning("Couldn't find the json file. " \
