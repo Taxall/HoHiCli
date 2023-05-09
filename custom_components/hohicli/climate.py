@@ -2,6 +2,7 @@ import logging
 import json
 import os.path
 import asyncio
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback, HomeAssistant
@@ -23,6 +24,16 @@ COMPONENT_ABS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _LOGGER = logging.getLogger(__name__)
 
+async def async_download_file(source, dest):
+    """Set up the hisense climate."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(source) as response:
+            if response.status == 200:
+                async with aiofiles.open(dest, mode='wb') as f:
+                    await f.write(await response.read())
+            else:
+                raise Exception("File not found")
+
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
@@ -33,6 +44,19 @@ async def async_setup_platform(
 
     device_json_path = os.path.join(
         COMPONENT_ABS_DIR, 'ircommands', 'hisense_smart-dc_inverter.json')
+
+    if not os.path.exists(device_json_path):
+        _LOGGER.warning("Couldn't find the json file. " \
+                        "Try to download it from the GitHub.")
+
+        try:
+            file_url = ("https://raw.githubusercontent.com/Taxall/HoHiCli/main/ircommands/hisense_smart-dc_inverter.json")
+
+            await async_download_file(file_url, device_json_path)
+        except Exception:
+            _LOGGER.error("Error on downloading json file.")
+            return
+
     with open(device_json_path, mode="r", encoding="utf-8") as json_obj:
         try:
             device_data = json.load(json_obj)
