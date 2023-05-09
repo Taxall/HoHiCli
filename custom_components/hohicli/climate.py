@@ -53,8 +53,8 @@ async def async_setup_platform(
             file_url = ("https://raw.githubusercontent.com/Taxall/HoHiCli/main/ircommands/hisense_smart-dc_inverter.json")
 
             await async_download_file(file_url, device_json_path)
-        except Exception:
-            _LOGGER.error("Error on downloading json file.")
+        except Exception as ex: # pylint: disable=broad-except
+            _LOGGER.exception(ex)
             return
 
     with open(device_json_path, mode="r", encoding="utf-8") as json_obj:
