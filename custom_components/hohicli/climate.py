@@ -102,7 +102,7 @@ class Climate(ClimateEntity, RestoreEntity):
         self._attr_unique_id = config.get(CONF_UNIQUE_ID)
         self._attr_name = config.get(CONF_NAME)
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
-        self._attr_fan_modes = device_data['fanModes']
+        self._attr_fan_modes = device_data['fanSpeeds']
         self._commands = device_data['commands']
         self._attr_target_temperature = 23
         self._attr_hvac_mode = HVACMode.OFF
