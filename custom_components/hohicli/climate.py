@@ -1,81 +1,55 @@
 import logging
-import json
-import os
-import os.path
 import asyncio
-import aiohttp
-import aiofiles
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback, HomeAssistant
-from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate import (
+    ClimateEntity,
+    FAN_AUTO,
+    FAN_HIGH,
+    FAN_MEDIUM,
+    FAN_LOW)
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.components.climate.const import (
-    HVACMode, ATTR_HVAC_MODE, ClimateEntityFeature)
+    HVACMode,
+    ATTR_HVAC_MODE,
+    ClimateEntityFeature,
+    PRESET_BOOST,
+    PRESET_NONE,
+    PRESET_SLEEP)
 from homeassistant.const import (
-    CONF_NAME, STATE_UNKNOWN, STATE_UNAVAILABLE, ATTR_TEMPERATURE)
-from .sender import get_command_sender
+    CONF_NAME,
+    STATE_UNKNOWN,
+    STATE_UNAVAILABLE,
+    ATTR_TEMPERATURE)
+from .sender import CommandSender
 from .const import (
-    CONF_TEMPERATURE_SENSOR, CONF_HUMIDITY_SENSOR, CONF_MIN_TEMPERATURE, CONF_MAX_TEMPERATURE, CONF_UNIQUE_ID, CONF_TOPIC)
+    CONF_TEMPERATURE_SENSOR,
+    CONF_HUMIDITY_SENSOR,
+    CONF_MIN_TEMPERATURE,
+    CONF_MAX_TEMPERATURE,
+    CONF_UNIQUE_ID)
 
 COMPONENT_ABS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_download_file(source, dest):
-    """Set up the hisense climate."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(source) as response:
-            if response.status == 200:
-                async with aiofiles.open(dest, mode='wb') as f:
-                    await f.write(await response.read())
-            else:
-                raise Exception("File not found")
-
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the hisense climate."""
 
-    ircommands_path = os.path.join(
-        COMPONENT_ABS_DIR, 'ircommands');
-
-    device_json_path = os.path.join(ircommands_path , 'hisense_smart-dc_inverter.json')
-
-    if not os.path.exists(ircommands_path):
-        os.makedirs(ircommands_path)
-
-    if not os.path.exists(device_json_path):
-        _LOGGER.warning("Couldn't find the json file. " \
-                        "Try to download it from the GitHub.")
-
-        try:
-            file_url = ("https://raw.githubusercontent.com/Taxall/HoHiCli/main/ircommands/hisense_smart-dc_inverter.json")
-
-            await async_download_file(file_url, device_json_path)
-        except Exception as ex: # pylint: disable=broad-except
-            _LOGGER.exception(ex)
-            return
-
-    with open(device_json_path, mode="r", encoding="utf-8") as json_obj:
-        try:
-            device_data = json.load(json_obj)
-        except Exception as ex: # pylint: disable=broad-except
-            _LOGGER.exception(ex)
-            return
-
-    command_sender = get_command_sender(hass, config.get(CONF_TOPIC))
+    command_sender = CommandSender(hass, config)
 
     async_add_entities(
         [
-            Climate(hass, config, device_data, command_sender)
+            Climate(hass, config, command_sender)
         ]
     )
 
@@ -90,29 +64,32 @@ async def async_setup_entry(
 
 class Climate(ClimateEntity, RestoreEntity):
     """Class for managing conditioner"""
-    def __init__(self, hass, config, device_data, command_sender):
+    def __init__(self, hass, config, command_sender):
         _LOGGER.debug("init Climate")
 
         self.hass = hass
 
         self._temp_lock = asyncio.Lock()
 
-        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.PRESET_MODE
 
+        self.target_temperature_step = 1
+        self._dimmer_on = False
         self._attr_temperature_unit = TEMP_CELSIUS
         self._attr_min_temp = CONF_MIN_TEMPERATURE
         self._attr_max_temp = CONF_MAX_TEMPERATURE
         self._controller = command_sender
-        self._device_data = device_data
         self._attr_unique_id = config.get(CONF_UNIQUE_ID)
         self._attr_name = config.get(CONF_NAME)
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
-        self._attr_fan_modes = device_data['fanSpeeds']
-        self._commands = device_data['commands']
+        self._attr_fan_modes = [FAN_AUTO, FAN_HIGH, FAN_MEDIUM, FAN_LOW]
         self._attr_target_temperature = 23
         self._attr_hvac_mode = HVACMode.OFF
         self._last_hvac_mode = HVACMode.OFF
         self._attr_fan_mode = self._attr_fan_modes[0]
+
+        self._attr_preset_mode = None
+        self._attr_preset_modes = [PRESET_NONE, PRESET_BOOST, PRESET_SLEEP]
 
         self._temperature_sensor = config.get(CONF_TEMPERATURE_SENSOR)
         self._humidity_sensor = config.get(CONF_HUMIDITY_SENSOR)
@@ -164,7 +141,7 @@ class Climate(ClimateEntity, RestoreEntity):
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperatures."""
-        hvac_mode = kwargs.get(ATTR_HVAC_MODE)  
+        hvac_mode = kwargs.get(ATTR_HVAC_MODE)
         temperature = kwargs.get(ATTR_TEMPERATURE)
 
         if temperature is None:
@@ -202,6 +179,26 @@ class Climate(ClimateEntity, RestoreEntity):
 
         if self._attr_hvac_mode != HVACMode.OFF:
             await self.send_command()
+        await self.async_update_ha_state()
+
+    async def async_set_preset_mode(self, preset_mode: str):
+        """Set preset mode."""
+        self._attr_preset_mode = preset_mode
+
+        if self._attr_hvac_mode != HVACMode.OFF:
+            if self._attr_preset_mode is PRESET_SLEEP and self._dimmer_on is False:
+                await self._controller.async_dimmer_change_status()
+                self._dimmer_on = True
+            elif self._attr_preset_mode is PRESET_BOOST:
+                self._dimmer_on = False
+                if self._attr_hvac_mode == HVACMode.COOL:
+                    self._attr_target_temperature = 16
+                    await self._controller.async_enable_turbo_cool()
+                elif self._attr_hvac_mode == HVACMode.HEAT:
+                    self._attr_target_temperature = 30
+                    await self._controller.async_enable_turbo_heat()
+                else:
+                    raise KeyError(f'Unknown hvac_mode "{self._attr_hvac_mode}"')
         await self.async_update_ha_state()
 
     async def async_turn_off(self):
@@ -253,20 +250,22 @@ class Climate(ClimateEntity, RestoreEntity):
         """Sending command."""
         async with self._temp_lock:
             try:
-                operation_mode = self._attr_hvac_mode
-                fan_mode = self._attr_fan_mode
-                target_temperature = f'{self._attr_target_temperature:g}'
-
-                if operation_mode == HVACMode.OFF:
-                    await self._controller.send(self._commands['off'])
+                if self._attr_hvac_mode == HVACMode.OFF:
+                    await self._controller.async_off()
                     return
 
                 if self._last_hvac_mode is None or self._last_hvac_mode == HVACMode.OFF:
-                    await self._controller.send(self._commands['on'])
-                    await asyncio.sleep(1)
+                    await self._controller.async_on()
 
-                await self._controller.send(
-                        self._commands[operation_mode][fan_mode][target_temperature])
+                if self._dimmer_on is True:
+                    await self._controller.async_dimmer_change_status()
+                    self._dimmer_on = False
+
+                await self._controller.async_send_packet_command(self._attr_hvac_mode, self._attr_fan_mode, self._attr_target_temperature)
+
+                if self._attr_preset_mode is PRESET_SLEEP and self._dimmer_on is False:
+                    await self._controller.async_dimmer_change_status()
+                    self._dimmer_on = True
             except Exception as ex: # pylint: disable=broad-except
                 _LOGGER.exception(ex)
 
