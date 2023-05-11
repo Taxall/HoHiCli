@@ -1,7 +1,7 @@
 import logging
 import asyncio
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, DiscoveryInfoType
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -34,14 +34,13 @@ from .const import (
     CONF_MAX_TEMPERATURE,
     CONF_UNIQUE_ID)
 
-COMPONENT_ABS_DIR = os.path.dirname(os.path.abspath(__file__))
-
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback
+    async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the hisense climate."""
 
@@ -73,7 +72,7 @@ class Climate(ClimateEntity, RestoreEntity):
 
         self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.PRESET_MODE
 
-        self.target_temperature_step = 1
+        self._attr_target_temperature_step = 1
         self._dimmer_on = False
         self._attr_temperature_unit = TEMP_CELSIUS
         self._attr_min_temp = CONF_MIN_TEMPERATURE
@@ -86,9 +85,9 @@ class Climate(ClimateEntity, RestoreEntity):
         self._attr_target_temperature = 23
         self._attr_hvac_mode = HVACMode.OFF
         self._last_hvac_mode = HVACMode.OFF
-        self._attr_fan_mode = self._attr_fan_modes[0]
+        self._attr_fan_mode = FAN_AUTO
 
-        self._attr_preset_mode = None
+        self._attr_preset_mode = PRESET_NONE
         self._attr_preset_modes = [PRESET_NONE, PRESET_BOOST, PRESET_SLEEP]
 
         self._temperature_sensor = config.get(CONF_TEMPERATURE_SENSOR)
@@ -192,10 +191,10 @@ class Climate(ClimateEntity, RestoreEntity):
             elif self._attr_preset_mode is PRESET_BOOST:
                 self._dimmer_on = False
                 if self._attr_hvac_mode == HVACMode.COOL:
-                    self._attr_target_temperature = 16
+                    self._attr_target_temperature = CONF_MIN_TEMPERATURE
                     await self._controller.async_enable_turbo_cool()
                 elif self._attr_hvac_mode == HVACMode.HEAT:
-                    self._attr_target_temperature = 30
+                    self._attr_target_temperature = CONF_MAX_TEMPERATURE
                     await self._controller.async_enable_turbo_heat()
                 else:
                     raise KeyError(f'Unknown hvac_mode "{self._attr_hvac_mode}"')
