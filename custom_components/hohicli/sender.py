@@ -24,15 +24,10 @@ class CommandSender():
         with open(ircommands_path, mode="r", encoding="utf-8") as json_obj:
             return json.load(json_obj)
 
-    async def async_off(self):
-        """Send off command."""
-        _LOGGER.debug('Send off command')
+    async def async_change_power_status(self):
+        """Send change power status command."""
+        _LOGGER.debug('Send change power status command')
         await self.async_send_for_tya_ir(self._commands['off'])
-
-    async def async_on(self):
-        """Send off command."""
-        _LOGGER.debug('Send on command')
-        await self.async_send_for_tya_ir(self._commands['on'])
 
     async def async_dimmer_change_status(self):
         """Send dimmer change status command."""
@@ -49,7 +44,7 @@ class CommandSender():
         _LOGGER.debug('Send enable turbo heat command')
         await self.async_send_for_tya_ir(self._commands['heat']['turbo'])
 
-    async def async_send_for_tya_ir_packet_command(self, operation_mode, fan_mode, target_temperature):
+    async def async_send_packet_command(self, operation_mode, fan_mode, target_temperature):
         """Send packet command."""
         _LOGGER.debug('Send packet command for operation mode: "%s",  fan_mode "%s", target temperature "%s"', operation_mode, fan_mode, target_temperature)
 
