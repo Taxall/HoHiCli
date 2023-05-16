@@ -61,4 +61,4 @@ class CommandSender():
         }
         _LOGGER.debug('Send data "%s" to mqtt"', service_data)
         await self.hass.services.async_call('mqtt', 'publish', service_data)
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
