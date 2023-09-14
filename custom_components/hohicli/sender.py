@@ -24,31 +24,40 @@ class CommandSender():
         with open(ircommands_path, mode="r", encoding="utf-8") as json_obj:
             return json.load(json_obj)
 
-    async def async_change_power_status(self):
-        """Send change power status command."""
-        _LOGGER.debug('Send change power status command')
+    async def async_power_on(self):
+        """Send power on command."""
+        _LOGGER.debug('Send power on command')
+        await self.async_send_safe_command(self._commands['on'])
+
+    async def async_power_off(self):
+        """Send power off command."""
+        _LOGGER.debug('Send power off command')
         await self.async_send_for_tya_ir(self._commands['off'])
 
     async def async_dimmer_change_status(self):
         """Send dimmer change status command."""
         _LOGGER.debug('Send dimmer change status command')
-        await self.async_send_for_tya_ir(self._commands['dimmer'])
+        await self.async_send_safe_command(self._commands['dimmer'])
 
     async def async_enable_turbo_cool(self):
         """Send enable turbo cool command."""
         _LOGGER.debug('Send enable turbo cool command')
-        await self.async_send_for_tya_ir(self._commands['cool']['turbo'])
+        await self.async_send_safe_command(self._commands['cool']['turbo'])
 
     async def async_enable_turbo_heat(self):
         """Send enable turbo heat command."""
         _LOGGER.debug('Send enable turbo heat command')
-        await self.async_send_for_tya_ir(self._commands['heat']['turbo'])
+        await self.async_send_safe_command(self._commands['heat']['turbo'])
 
     async def async_send_packet_command(self, operation_mode, fan_mode, target_temperature):
         """Send packet command."""
         _LOGGER.debug('Send packet command for operation mode: "%s",  fan_mode "%s", target temperature "%s"', operation_mode, fan_mode, target_temperature)
+        await self.async_send_safe_command(self._commands[operation_mode][fan_mode][f'{target_temperature:g}'])
 
-        await self.async_send_for_tya_ir(self._commands[operation_mode][fan_mode][f'{target_temperature:g}'])
+    async def async_send_safe_command(self, command):
+        """Send power_off and next command."""
+        await asyncio.sleep(2)
+        await self.async_send_for_tya_ir(command)
 
     async def async_send_for_tya_ir(self, command):
         """Send command."""
@@ -61,4 +70,3 @@ class CommandSender():
         }
         _LOGGER.debug('Send data "%s" to mqtt"', service_data)
         await self.hass.services.async_call('mqtt', 'publish', service_data)
-        await asyncio.sleep(2)
