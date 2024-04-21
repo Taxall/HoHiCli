@@ -278,7 +278,7 @@ class Climate(ClimateEntity, RestoreEntity):
         async with self._temp_lock:
             try:
                 if self._power_status == PowerStatus.OFF:
-                    await self._command_sender.async_change_power_status()
+                    await self._command_sender.async_power_on()
                     self._power_status = PowerStatus.ON
                     _LOGGER.debug("Power on")
 
@@ -288,7 +288,7 @@ class Climate(ClimateEntity, RestoreEntity):
                     _LOGGER.debug("Dimmer off")
 
                 if self._attr_hvac_mode == HVACMode.OFF:
-                    await self._command_sender.async_change_power_status()
+                    await self._command_sender.async_power_off()
                     self._power_status = PowerStatus.OFF
                     _LOGGER.debug("Power off")
                     return
