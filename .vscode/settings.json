@@ -1,4 +1,7 @@
 {
+    "python.venvPath": ".venv",
+    "python.terminal.activateEnvironment": true,
+    "python.pythonPath": ".venv/bin/python",
     "[python]": {
         "editor.defaultFormatter": "ms-python.autopep8"
     },
