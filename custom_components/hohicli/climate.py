@@ -11,7 +11,7 @@ from homeassistant.components.climate import (
     FAN_MEDIUM,
     FAN_LOW)
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType
@@ -95,7 +95,7 @@ class Climate(ClimateEntity, RestoreEntity):
         self._temp_lock = asyncio.Lock()
         self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.PRESET_MODE
         self._attr_target_temperature_step = 1
-        self._attr_temperature_unit = TEMP_CELSIUS
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_min_temp = CONF_MIN_TEMPERATURE
         self._attr_max_temp = CONF_MAX_TEMPERATURE
         self._attr_unique_id = config.get(CONF_UNIQUE_ID)
