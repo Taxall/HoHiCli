@@ -233,12 +233,20 @@ class Climate(ClimateEntity, RestoreEntity):
         """Turn off."""
         await self.async_set_hvac_mode(HVACMode.OFF)
 
+    def turn_off(self) -> None:
+        """Turn the entity off."""
+        asyncio.run(self.async_turn_off()) 
+
     async def async_turn_on(self):
         """Turn on."""
         if self._last_on_operation is not None:
             await self.async_set_hvac_mode(self._last_on_operation)
         else:
             await self.async_set_hvac_mode(HVACMode.COOL)
+
+    def turn_on(self) -> None:
+        """Turn the entity on."""
+        asyncio.run(self.async_turn_on()) 
 
     async def _async_temp_sensor_changed(self, entity_id, old_state, new_state):
         """Handle temperature sensor changes."""
