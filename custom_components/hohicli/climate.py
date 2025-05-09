@@ -93,7 +93,13 @@ class Climate(ClimateEntity, RestoreEntity):
         self.hass = hass
         self._command_sender = command_sender
         self._temp_lock = asyncio.Lock()
-        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.PRESET_MODE
+        self._attr_supported_features = (
+                ClimateEntityFeature.TARGET_TEMPERATURE 
+                | ClimateEntityFeature.FAN_MODE 
+                | ClimateEntityFeature.PRESET_MODE 
+                | ClimateEntityFeature.TURN_ON 
+                | ClimateEntityFeature.TURN_OFF
+            )
         self._attr_target_temperature_step = 1
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_min_temp = CONF_MIN_TEMPERATURE
